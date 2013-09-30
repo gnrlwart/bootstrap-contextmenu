@@ -87,14 +87,23 @@
 			return true;
 		}
 
+		,getOwnerDocument: function () {
+			if( this.$elements.length ) {
+				return $( this.$elements[0].ownerDocument );
+			} else {
+				return $( document );
+			}
+		}
+
 		,listen: function () {
-			var _this = this;
+			var _this = this
+				, $ownerHtml = this.getOwnerDocument().find('html');
 			this.$elements
 					.on('contextmenu.context.data-api', $.proxy(this.show, this));
-			$('html')
+			$ownerHtml
 					.on('click.context.data-api', $.proxy(this.closemenu, this));
 
-			var $target = $(this.$elements.attr('data-target'));
+			var $target = $ownerHtml.find(this.$elements.attr('data-target'));
 
 			$target.on('click.context.data-api', function (e) {
 				if($(this).data('_context_this_ref') == _this) {
@@ -102,7 +111,7 @@
 				}
 			});
 
-			$('html').on('click.context.data-api', function (e) {
+			$ownerHtml.on('click.context.data-api', function (e) {
 				if (!e.ctrlKey) {
 					$target.removeClass('open');
 				}
@@ -110,10 +119,11 @@
 		}
 
 		,destroy: function() {
+			var $ownerHtml = this.getOwnerDocument().find('html');
 			this.$elements.off('.context.data-api').removeData('context');
-			$('html').off('.context.data-api');
+			$ownerHtml.off('.context.data-api');
 
-			var $target = $(this.$elements.attr('data-target'));
+			var $target = $ownerHtml.find(this.$elements.attr('data-target'));
 			$target.off('.context.data-api');
 		}
 
@@ -126,7 +136,7 @@
 				selector = selector && selector.replace(/.*(?=#[^\s]*$)/, '') //strip for ie7
 			}
 
-			$menu = $(selector);
+			$menu = this.getOwnerDocument().find(selector);
 
 			return $menu;
 		}
@@ -134,8 +144,9 @@
 		,getPosition: function(e, $menu) {
 			var mouseX = e.clientX
 				, mouseY = e.clientY
-				, boundsX = $(window).width()
-				, boundsY = $(window).height()
+				, $ownerDoc = this.getOwnerDocument()
+				, boundsX = $ownerDoc.width()
+				, boundsY = $ownerDoc.height()
 				, menuWidth = $menu.find('.dropdown-menu').outerWidth()
 				, menuHeight = $menu.find('.dropdown-menu').outerHeight()
 				, tp = {"position":"fixed"}
@@ -162,7 +173,7 @@
 
 		,clearMenus: function(e) {
 			if (!e.ctrlKey) {
-				$('[data-toggle=context]').each(function() {
+				this.getOwnerDocument().find('[data-toggle=context]').each(function() {
 					this.getMenu()
 						.removeClass('open');
 				});
@@ -174,6 +185,11 @@
 	 * ========================== */
 
 	$.fn.contextmenu = function (option,e) {
+		if( option === 'bindToDocument' ) {
+			bindToDocument( e );
+			return;
+		}
+		
 		var $this = this;
 		return (function () {
 			var data = $this.data('context')
@@ -190,10 +206,13 @@
 	/* APPLY TO STANDARD CONTEXT MENU ELEMENTS
 	 * =================================== */
 
-	$(document)
-		.on('contextmenu.context.data-api', '[data-toggle=context]', function(e) {
+	function bindToDocument( doc ) {
+		$(doc)
+			.on('contextmenu.context.data-api', '[data-toggle=context]', function(e) {
 				$(this).contextmenu('show',e);
 				e.preventDefault();
-		});
+			});
+	}
+	bindToDocument( document );
 
 }(window.jQuery));
